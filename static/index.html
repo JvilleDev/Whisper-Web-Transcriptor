@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcripción de Archivos</title>
+    <!-- Agrega las referencias a los archivos CSS y JavaScript de Bootstrap -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap/dist/css/bootstrap.min.css">
+    <style>
+        #respuesta{
+            background-color: #d5d5d5;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            padding-bottom: 0.25rem;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5" style="text-align: center;">
+        <h1 class="display-4">Transcribir Audio</h1>
+        <form id="transcriptionForm" enctype="multipart/form-data">
+            <div class="mb-3 text-center">
+                <label for="archivo" class="form-label">Selecciona un archivo .mp3</label>
+                <input type="file" class="form-control d-inline" id="archivo" name="audio" accept=".mp3" required>
+            </div>
+            <button type="submit" class="btn btn-primary">INICIAR</button>
+        </form>
+        <div id="status" class="mt-3"></div>
+        <div class="progress mt-3">
+            <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>          
+        <div id="respuesta" class="mt-3"></div>
+    </div>
+
+    <!-- Agrega la referencia al archivo JavaScript de Bootstrap (opcional) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap/dist/js/bootstrap.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js" integrity="sha512-zoJXRvW2gC8Z0Xo3lBbao5+AS3g6YWr5ztKqaicua11xHo+AvE1b0lT9ODgrHTmNUxeCw0Ry4BGRYZfXu70weg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>    <script>
+        // Función para manejar la respuesta del servidor y mostrarla en la página
+        const transcriptionForm = document.getElementById('transcriptionForm');
+        const respuestaDiv = document.getElementById('respuesta');
+        const statusDiv = document.getElementById('status');
+        const socket = io(); // Crea una conexión a socket.io
+        // Escuchar el evento 'connect' al conectarse al servidor
+        socket.on('connect', () => {
+        console.log('Conectado correctamente al servidor de Socket.io');
+        });
+        transcriptionForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            statusDiv.style.opacity='0';
+            respuestaDiv.innerHTML='';
+            const formData = new FormData(transcriptionForm);
+            try {
+                const response = await fetch('/transcribir', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // Muestra la respuesta en la página
+                    console.log(data)
+                    respuestaDiv.innerHTML = `<p><span style="font-weight:bold;">Transcripción:</span> ${data.transcripcion}</p>`;
+                } else {
+                    respuestaDiv.innerHTML = '<p>Error al transcribir el archivo.</p>';
+                }
+            } catch (error) {
+                console.error('Error al enviar la solicitud:', error);
+                respuestaDiv.innerHTML = '<p>Error de conexión.</p>';
+            }
+        });
+        socket.on('status', (message)=>{
+            statusDiv.innerHTML = `<p>${message}</p>`;
+            statusDiv.style.opacity='1';
+        })
+        const progressBar = document.getElementById('progress-bar');
+
+        socket.on('progress', (percentage) => {
+        // Actualiza el valor del estilo 'width' de la barra de progreso
+        progressBar.style.width = `${percentage}%`;
+        progressBar.setAttribute('aria-valuenow', percentage);
+        progressBar.innerHTML=percentage;
+        });
+    </script>
+</body>
+</html>
